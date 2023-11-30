@@ -9,13 +9,15 @@ from .models import Report
 
 processor = BeitImageProcessor.from_pretrained('TimKond/diffusion-detection')
 model = BeitForImageClassification.from_pretrained('TimKond/diffusion-detection')
-
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+}
 
 @api_view(['POST'])
 def check_image(request):
     try:
         image_url = request.data.get('url')
-        image_response = requests.get(image_url, stream=True)
+        image_response = requests.get(image_url, stream=True, headers=headers)
         if image_response.status_code != 200:
             return Response({"message": f"Request to {image_url} failed with status code: {image_response.status_code}"}, status=int(image_response.status_code))
         
