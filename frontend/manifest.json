@@ -2,8 +2,9 @@
   "manifest_version": 2,
   "name": "Artifica",
   "version": "1.0",
-  "description": "Detech AI Generated Images",
+  "description": "Detect AI Generated Images",
   "permissions": [
+    "activeTab",
     "contextMenus"
   ],
   "background": {

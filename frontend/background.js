@@ -1,5 +1,14 @@
 chrome.runtime.onInstalled.addListener(function () {
   chrome.contextMenus.create({
+    id: "artificaScanPage",
+    title: "Scan Page for AI Images",
+    contexts: ["page"]
+  });
+  // ... existing menu items ...
+});
+
+chrome.runtime.onInstalled.addListener(function () {
+  chrome.contextMenus.create({
     id: "artificaCheckAI",
     title: "Is this AI?",
     contexts: ["image"]
@@ -20,6 +29,13 @@ chrome.runtime.onInstalled.addListener(function () {
     title: "Report Not AI",
     contexts: ["image"]
   });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "artificaScanPage") {
+    chrome.tabs.executeScript(tab.id, {file: "scanPage.js"});
+  }
+  // ... existing handlers ...
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -129,3 +145,44 @@ function makeReportRequest(link, feedback) {
     console.error("Error making report:", error);
   });
 }
+
+
+function makeBatchCheckRequest(links) {
+  const endpoint = "http://localhost:8000/api/batch_check/";
+
+  fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      urls: links,
+    }),
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json();
+    } else {
+      throw new Error('Network response was not ok.');
+    }
+  })
+  .then(data => {
+    // Process each result
+    data.forEach(result => {
+      if (result.error) {
+        console.error(`Error processing ${result.url}: ${result.error}`);
+      } else {
+        console.log(`Image: ${result.url}, AI Detection: ${result.label}`);
+        // Here you can further process the results, e.g., display notifications or update the UI
+      }
+    });
+    // Optional: Provide a summary or further instructions to the user
+    alert('Page scan complete. Check the console for details.');
+  })
+  .catch(error => {
+    console.error('Error during fetch operation:', error.message);
+    alert('Error occurred while scanning the page.');
+  });
+}
+
+
