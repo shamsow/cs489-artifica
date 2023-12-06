@@ -146,7 +146,9 @@ function makeReportRequest(link, feedback) {
   .then((data) => {
     // Handle the response data
     console.log("Report Response:", data);
-    alert(data.message)
+    real_stats = (data.real / (data.real + data.synthetic)) * 100
+    synth_stats = (data.synthetic / (data.real + data.synthetic)) * 100
+    alert(`${data.message} [Real: ${Math.round(real_stats)}; Synthetic: ${Math.round(synth_stats)}]`)
   })
   .catch((error) => {
     console.error("Error making report:", error);
@@ -181,7 +183,7 @@ function makeBatchCheckRequest(links) {
         console.error(`Error processing ${result.url}: ${result.error}`);
       } else {
         console.log(`Image: ${result.url}, AI Detection: ${result.label}`);
-        if (result.label === 'fake') { // Assuming 'fake' is the label for fake images
+        if (result.label === 'positive') { 
           foundFake = true;
         }
       }
@@ -190,10 +192,11 @@ function makeBatchCheckRequest(links) {
     if (!foundFake) {
       // Delay the alert by 3 seconds (3000 milliseconds)
       setTimeout(() => {
-        alert('No fake image found');
+        alert('No AI generated images found.');
       }, 3000);
     } else {
-      alert('Page scan complete. Check the console for details.');
+      console.log(data)
+      alert(`Found ${data.length} AI generated images on this page. Check console for details.`);
     }
   })
   .catch(error => {
