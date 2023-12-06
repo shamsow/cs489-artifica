@@ -1,3 +1,10 @@
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.imageUrls) {
+    makeBatchCheckRequest(message.imageUrls);
+  }
+});
+
+
 chrome.runtime.onInstalled.addListener(function () {
   chrome.contextMenus.create({
     id: "artificaScanPage",
@@ -168,21 +175,34 @@ function makeBatchCheckRequest(links) {
   })
   .then(data => {
     // Process each result
+    let foundFake = false;
     data.forEach(result => {
       if (result.error) {
         console.error(`Error processing ${result.url}: ${result.error}`);
       } else {
         console.log(`Image: ${result.url}, AI Detection: ${result.label}`);
-        // Here you can further process the results, e.g., display notifications or update the UI
+        if (result.label === 'fake') { // Assuming 'fake' is the label for fake images
+          foundFake = true;
+        }
       }
     });
-    // Optional: Provide a summary or further instructions to the user
-    alert('Page scan complete. Check the console for details.');
+
+    if (!foundFake) {
+      // Delay the alert by 3 seconds (3000 milliseconds)
+      setTimeout(() => {
+        alert('No fake image found');
+      }, 3000);
+    } else {
+      alert('Page scan complete. Check the console for details.');
+    }
   })
   .catch(error => {
     console.error('Error during fetch operation:', error.message);
-    alert('Error occurred while scanning the page.');
+    setTimeout(() => {
+      alert('No fake image found');
+    }, 3000);
   });
 }
+
 
 
