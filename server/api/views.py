@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from imagehash import phash
 from .models import Report
+import io
 
 processor = BeitImageProcessor.from_pretrained('TimKond/diffusion-detection')
 model = BeitForImageClassification.from_pretrained('TimKond/diffusion-detection')
@@ -69,6 +70,7 @@ def report(request):
         return Response({"message": "Something went wrong :("}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 @api_view(['POST'])
 def batch_check_images(request):
     try:
@@ -78,16 +80,22 @@ def batch_check_images(request):
         for image_url in image_urls:
             image_response = requests.get(image_url, stream=True, headers=headers)
             if image_response.status_code == 200:
-                image = Image.open(image_response.raw).convert("RGB")
-                inputs = processor(images=image, return_tensors="pt")
-                outputs = model(**inputs)
-                logits = outputs.logits
-                predicted_class_idx = logits.argmax(-1).item()
-                results.append({ "url": image_url, "label": model.config.id2label[predicted_class_idx]})
+                try:
+                    # Ensure that the entire content is downloaded before processing
+                    image_data = image_response.content
+                    with Image.open(io.BytesIO(image_data)).convert("RGB") as image:
+                        inputs = processor(images=image, return_tensors="pt")
+                        outputs = model(**inputs)
+                        logits = outputs.logits
+                        predicted_class_idx = logits.argmax(-1).item()
+                        results.append({"url": image_url, "label": model.config.id2label[predicted_class_idx]})
+                except IOError:
+                    results.append({"url": image_url, "error": "Cannot identify image file"})
             else:
-                results.append({ "url": image_url, "error": f"Failed to fetch image with status code {image_response.status_code}"})
+                results.append({"url": image_url, "error": f"Failed to fetch image with status code {image_response.status_code}"})
 
         return Response(results, status=status.HTTP_200_OK)
     except Exception as e:
         print("error: ", e)
         return Response({"message": "Something went wrong :("}, status=status.HTTP_400_BAD_REQUEST)
+
