@@ -4,7 +4,7 @@ import requests
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-
+from imagehash import phash
 from .models import Report
 
 processor = BeitImageProcessor.from_pretrained('TimKond/diffusion-detection')
@@ -34,16 +34,24 @@ def check_image(request):
         return Response({"message": "Something went wrong :("}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 @api_view(['POST'])
 def report(request):
     try:
-        image_url = request.data.get('url')
+        image_url = request.data.get('url')  # Assuming multiple URLs are sent as a list in the 'urls' field
         feedback = request.data.get('feedback')
         
+        image = Image.open(requests.get(image_url, stream=True).raw)
+        image_hash = str(phash(image))
+        
         try:
-            entry = Report.objects.get(image_url=image_url)
+            entry = Report.objects.get(image_hash=image_hash)
         except Report.DoesNotExist:
-            entry = Report(image_url=image_url, real=0, synthetic=0)
+            entry = Report(image_hash=image_hash)
+
+        # Update image URLs for the entry
+        if image_url not in entry.image_urls:
+            entry.image_urls.append(image_url)
 
         if feedback == 'negative':
             entry.real += 1
@@ -52,8 +60,12 @@ def report(request):
 
         entry.save()
 
-        return Response({"message": "Image feedback recorded successfully"}, status=status.HTTP_200_OK)
-    except:
+        return Response({
+            "message": "Image feedback recorded successfully",
+            "real": entry.real,
+            "synthetic": entry.synthetic
+            }, status=status.HTTP_200_OK)
+    except Exception as e:
         return Response({"message": "Something went wrong :("}, status=status.HTTP_400_BAD_REQUEST)
 
 
